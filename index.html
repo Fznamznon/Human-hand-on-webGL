@@ -6,6 +6,7 @@
 
     <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
 
+
     <script id="shader-fs" type="x-shader/x-fragment"> //пиксельный шейдер
 
 
@@ -44,6 +45,28 @@
             if (!gl) alert("не удалось инициализировать webGL!");
 
         }
+
+        var humerus = {
+            filename: "bones/humerus.asc",
+            VertexPositionBuffer: null,
+            VertexIndicesBuffer: null
+
+        }
+
+        var ulna = {
+            filename: "bones/_ulna.asc",
+            VertexPositionBuffer: null,
+            VertexIndicesBuffer: null
+
+        };
+
+        var radius = {
+            filename: "bones/_radius.asc",
+            VertexPositionBuffer: null,
+            VertexIndicesBuffer: null
+        };
+
+
         var shader;
         var shaderScript;
         function getShader(gl, id) {
@@ -107,12 +130,13 @@
             shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "mvMatrix");
         }
 
-        var vertexPositions = [];
-        var triangleBuffer = [];
+
         var vertexPositionBuffer;
         var vertexIndices ;
 
-        function parse(data) {
+        function parse(data, bone) {
+            var vertexPositions = [];
+            var triangleBuffer = [];
             var lines = data.split("\n");
             var counts = lines[0].split(" ");
             vertexPositions.numItems = parseInt(counts[0]);
@@ -129,39 +153,39 @@
 
             for (i = vertexPositions.numItems + 1; i <= 1 + vertexPositions.numItems + triangleBuffer.numItems; ++i) {
                 val = lines[i].split(" ");
-                triangleBuffer.push(parseInt(val[1]) - 1);
-                triangleBuffer.push(parseInt(val[2]) - 1);
-                triangleBuffer.push(parseInt(val[3]) - 1);
+                triangleBuffer.push(parseInt(val[1]));
+                triangleBuffer.push(parseInt(val[2]));
+                triangleBuffer.push(parseInt(val[3]));
             }
 
-            vertexPositionBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+            bone.VertexPositionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, bone.VertexPositionBuffer);
 
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositions), gl.STATIC_DRAW);
 
-            vertexPositionBuffer.numItems = vertexPositions.numItems * 3;
-            vertexPositionBuffer.itemSize = 3;
+            bone.VertexPositionBuffer.numItems = vertexPositions.numItems * 3;
+            bone.VertexPositionBuffer.itemSize = 3;
 
-            vertexIndices = gl.createBuffer();
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndices);
+
+            bone.VertexIndicesBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bone.VertexIndicesBuffer);
 
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleBuffer), gl.STATIC_DRAW);
-            vertexIndices.numItems = triangleBuffer.numItems * 3;
+            bone.VertexIndicesBuffer.numItems = triangleBuffer.numItems * 3;
 
         }
-        var xmlhttp = null;
-        function getFinger() {
+        function getBone(bone) {
 
-            xmlhttp = new XMLHttpRequest();
-            xmlhttp.open("GET", "bones/ulna.asc");
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("GET", bone.filename);
 
 
             xmlhttp.onreadystatechange = function () {
                 if (xmlhttp.readyState == 4)
                 {
                     //alert(xmlhttp.responseText);
-                    parse(xmlhttp.responseText);
-
+                    parse(xmlhttp.responseText, bone);
+                    console.log('received')
                 }
             };
             xmlhttp.send();
@@ -176,25 +200,103 @@
             gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
         }
 
+        function degToRad(degrees) {
+            return degrees * Math.PI / 180;
+        }
+
+        var mouseDown = false;
+        var lastMouseX = null;
+        var lastMouseY = null;
+
+        var sceneRotationMatrix = mat4.create();
+        mat4.identity(sceneRotationMatrix)
+
+        function MouseDown(event) {
+            mouseDown = true;
+            LastMouseX = event.clientX;
+            LastMouseY = event.clientY;
+        }
+        
+        function MouseUp(event) {
+            mouseDown = false;
+        }
+        
+        function MouseMove(event) {
+            if (!mouseDown)
+            {
+                return;
+            }
+            var newX = event.clientX;
+            var newY = event.clientY;
+
+            var dx = LastMouseX - newX;
+            var newRotationMatrix = mat4.create();
+            mat4.identity(newRotationMatrix);
+            mat4.rotate(newRotationMatrix, degToRad(dx / 10), [0, 1, 0]);
+
+            var dy = LastMouseY - newY;
+            mat4.rotate(newRotationMatrix, degToRad(dy / 10), [1, 0, 0]);
+
+            mat4.multiply(newRotationMatrix, sceneRotationMatrix, sceneRotationMatrix);
+
+            LastMouseX = newX;
+            LastMouseY = newY;
+        }
+        
+        function tick() {
+            requestAnimationFrame(tick);
+            drawScene();
+        }
+
         function drawScene() {
             gl.viewport(0, 0, gl.viewWidth, gl.viewHeight);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
             mat4.perspective(45, gl.viewWidth / gl.viewHeight, 0.0001, 100500, pMatrix);
 
-            if (vertexPositionBuffer == null || vertexIndices == null)
-                return null;
-
             mat4.identity(mvMatrix); //в центр пространства
 
-            mat4.translate(mvMatrix, [0.0, 0.2, -0.6]);
+            mat4.translate(mvMatrix, [0.0, 0.2, -1.0]);
 
-            gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            //mat4.rotate(mvMatrix, degToRad(-90), [0, 0, 1]);
 
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndices);
+            mat4.multiply(mvMatrix, sceneRotationMatrix);
+
+
+            if (humerus.VertexIndicesBuffer == null || ulna.VertexPositionBuffer == null)
+                return null;
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, humerus.VertexPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, humerus.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, humerus.VertexIndicesBuffer);
             setMatrixUniforms();
-            gl.drawElements(gl.TRIANGLES, vertexIndices.numItems, gl.UNSIGNED_SHORT, 0);
-            //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems);
+            gl.drawElements(gl.TRIANGLES, humerus.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+
+            if (ulna.VertexIndicesBuffer == null || ulna.VertexPositionBuffer == null)
+                return null;
+
+            mat4.translate(mvMatrix, [0.0127, -0.274, 0.0389]);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, ulna.VertexPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, ulna.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ulna.VertexIndicesBuffer);
+            setMatrixUniforms();
+            gl.drawElements(gl.TRIANGLES, ulna.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+
+            if (radius.VertexIndicesBuffer == null || radius.VertexPositionBuffer == null)
+                return null;
+
+            //mat4.identity(mvMatrix);
+            mat4.translate(mvMatrix, [-0.0065, -0.008, 0.027]);
+
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, radius.VertexPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, radius.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, radius.VertexIndicesBuffer);
+            setMatrixUniforms();
+            gl.drawElements(gl.TRIANGLES, radius.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
         }
 
@@ -203,15 +305,19 @@
             initGL(canvas);
             initShaders();
             //initBuffers();
-            getFinger();
-
+            getBone(humerus);
+            getBone(ulna);
+            getBone(radius);
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
             gl.enable(gl.DEPTH_TEST);
 
+            canvas.onmousedown = MouseDown;
+            document.onmouseup = MouseUp;
+            document.onmousemove = MouseMove;
 
             //drawScene();
-            setInterval(drawScene, 10);
+            tick();
 
         }
 
