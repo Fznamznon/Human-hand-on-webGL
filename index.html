@@ -1,0 +1,232 @@
+<html>
+
+<head>
+    <title>Wrist Model</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+
+    <script id="shader-fs" type="x-shader/x-fragment"> //пиксельный шейдер
+
+
+    void main(void)
+    {
+      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+
+    </script>
+
+    <script id="shader-vs" type="x-shader/x-vertex"> //вершинный шейдер
+    
+    attribute vec3 aVertexPosition;
+
+    uniform mat4 mvMatrix;
+    uniform mat4 pMatrix;
+
+    void main(void)
+    {
+      gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);      
+    }
+
+
+    </script>
+
+
+    <script type="text/javascript">
+        var gl;
+        var canvas;
+
+        function initGL() {
+            gl = canvas.getContext("webgl");
+            gl.viewWidth = canvas.width;
+            gl.viewHeight = canvas.height;
+
+            if (!gl) alert("не удалось инициализировать webGL!");
+
+        }
+        var shader;
+        var shaderScript;
+        function getShader(gl, id) {
+
+            var shaderScript = document.getElementById(id);
+            if (!shaderScript) {
+                return null;
+            }
+
+            var str = "";
+            var k = shaderScript.firstChild;
+            while (k) //просто выдираем текст шейдеров из документа html чтобы было красиво :)
+            {
+                if (k.nodeType == 3) {
+                    str += k.textContent;
+                }
+                k = k.nextSibling;
+            }
+
+            if (shaderScript.type == "x-shader/x-fragment") {
+                shader = gl.createShader(gl.FRAGMENT_SHADER);
+            } else if (shaderScript.type = "x-shader/x-vertex") {
+                shader = gl.createShader(gl.VERTEX_SHADER);
+            }
+            else return null;
+
+            gl.shaderSource(shader, str);
+            gl.compileShader(shader);
+
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert(gl.getShaderInfoLog(shader));
+                return null;
+            }
+
+            return shader;
+
+        }
+
+        var shaderProgram;
+
+        function initShaders() {
+            var fragmentShader = getShader(gl, "shader-fs");
+            var vertexShader = getShader(gl, "shader-vs");
+
+            shaderProgram = gl.createProgram();
+
+            gl.attachShader(shaderProgram, vertexShader); //запилим шейдер на видеокарту
+            gl.attachShader(shaderProgram, fragmentShader);
+            gl.linkProgram(shaderProgram);
+
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert("Could not initialise shaders");
+            }
+            gl.useProgram(shaderProgram);
+
+            shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+            //alert(shaderProgram.vertexPositionAttribute);
+            gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+            shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "pMatrix");
+            shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "mvMatrix");
+        }
+
+        var vertexPositions = [];
+        var triangleBuffer = [];
+        var vertexPositionBuffer;
+        var vertexIndices ;
+
+        function parse(data) {
+            var lines = data.split("\n");
+            var counts = lines[0].split(" ");
+            vertexPositions.numItems = parseInt(counts[0]);
+            triangleBuffer.numItems = parseInt(counts[1]);
+
+
+
+            for (i = 1; i <= vertexPositions.numItems; ++i) {
+                var val = lines[i].split(/\s+/);
+                vertexPositions.push(parseFloat(val[1]));
+                vertexPositions.push(parseFloat(val[2]));
+                vertexPositions.push(parseFloat(val[3]));
+            }
+
+            for (i = vertexPositions.numItems + 1; i <= 1 + vertexPositions.numItems + triangleBuffer.numItems; ++i) {
+                val = lines[i].split(" ");
+                triangleBuffer.push(parseInt(val[1]) - 1);
+                triangleBuffer.push(parseInt(val[2]) - 1);
+                triangleBuffer.push(parseInt(val[3]) - 1);
+            }
+
+            vertexPositionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositions), gl.STATIC_DRAW);
+
+            vertexPositionBuffer.numItems = vertexPositions.numItems * 3;
+            vertexPositionBuffer.itemSize = 3;
+
+            vertexIndices = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndices);
+
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleBuffer), gl.STATIC_DRAW);
+            vertexIndices.numItems = triangleBuffer.numItems * 3;
+
+        }
+        var xmlhttp = null;
+        function getFinger() {
+
+            xmlhttp = new XMLHttpRequest();
+            xmlhttp.open("GET", "bones/ulna.asc");
+
+
+            xmlhttp.onreadystatechange = function () {
+                if (xmlhttp.readyState == 4)
+                {
+                    //alert(xmlhttp.responseText);
+                    parse(xmlhttp.responseText);
+
+                }
+            };
+            xmlhttp.send();
+
+        }
+
+        var pMatrix = mat4.create();
+        var mvMatrix = mat4.create();
+
+        function setMatrixUniforms() {
+            gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+            gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+        }
+
+        function drawScene() {
+            gl.viewport(0, 0, gl.viewWidth, gl.viewHeight);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            mat4.perspective(45, gl.viewWidth / gl.viewHeight, 0.0001, 100500, pMatrix);
+
+            if (vertexPositionBuffer == null || vertexIndices == null)
+                return null;
+
+            mat4.identity(mvMatrix); //в центр пространства
+
+            mat4.translate(mvMatrix, [0.0, 0.2, -0.6]);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndices);
+            setMatrixUniforms();
+            gl.drawElements(gl.TRIANGLES, vertexIndices.numItems, gl.UNSIGNED_SHORT, 0);
+            //gl.drawArrays(gl.TRIANGLES, 0, vertexPositionBuffer.numItems);
+
+        }
+
+        function webGLStart() {
+            canvas = document.getElementById("canvas");
+            initGL(canvas);
+            initShaders();
+            //initBuffers();
+            getFinger();
+
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+            gl.enable(gl.DEPTH_TEST);
+
+
+            //drawScene();
+            setInterval(drawScene, 10);
+
+        }
+
+    </script>
+
+
+</head>
+
+
+<body onload="webGLStart();">
+
+
+<canvas id="canvas" style="border: none;" width="500" height="500"></canvas>
+
+</body>
+
+
+</html>
