@@ -5,6 +5,15 @@
     <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
     <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <!-- include the jQuery and jQuery UI scripts -->
+    <script src="https://code.jquery.com/jquery-2.1.1.js"></script>
+    <script src="https://code.jquery.com/ui/1.11.1/jquery-ui.js"></script>
+
+    <!-- plus a jQuery UI theme, here I use "flick" -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.10.4/themes/flick/jquery-ui.css">
+
+    <script type="text/javascript" src="jquery-ui-slider-pips.js"></script>
+    <link rel="stylesheet" href="jquery-ui-slider-pips.css">
 
 
     <script id="shader-fs" type="x-shader/x-fragment"> //пиксельный шейдер
@@ -56,7 +65,13 @@
         var ulna = {
             filename: "bones/_ulna.asc",
             VertexPositionBuffer: null,
-            VertexIndicesBuffer: null
+            VertexIndicesBuffer: null,
+            Coordinate: elbow_flexion = {
+                axis: [0.226046935824, 0.191039945763, 0.955199728815],
+                min: 0.0,
+                max: 2.268928027593,
+                cur_value: 0.0
+            }
 
         };
 
@@ -262,7 +277,7 @@
             mat4.multiply(mvMatrix, sceneRotationMatrix);
 
 
-            if (humerus.VertexIndicesBuffer == null || ulna.VertexPositionBuffer == null)
+            if (humerus.VertexIndicesBuffer == null || humerus.VertexPositionBuffer == null)
                 return null;
 
             gl.bindBuffer(gl.ARRAY_BUFFER, humerus.VertexPositionBuffer);
@@ -276,6 +291,7 @@
                 return null;
 
             mat4.translate(mvMatrix, [0.0127, -0.274, 0.0389]);
+            mat4.rotate(mvMatrix, ulna.Coordinate.cur_value, ulna.Coordinate.axis);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, ulna.VertexPositionBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, ulna.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -331,8 +347,21 @@
 
 
 <canvas id="canvas" style="border: none;" width="500" height="500"></canvas>
-
+<div id="slider" ></div>
 </body>
+<script type="text/javascript">
 
+    var a = 0.0;
+    $("#slider").slider({
+        min: ulna.Coordinate.min,
+        max: ulna.Coordinate.max,
+        step: 0.001,
+        slide: function( event, ui ) {
+            ulna.Coordinate.cur_value = ui.value;
+        }
+    }).slider("float");
+
+
+</script>
 
 </html>
