@@ -60,7 +60,7 @@
             VertexPositionBuffer: null,
             VertexIndicesBuffer: null
 
-        }
+        };
 
         var ulna = {
             filename: "bones/_ulna.asc",
@@ -78,7 +78,13 @@
         var radius = {
             filename: "bones/_radius.asc",
             VertexPositionBuffer: null,
-            VertexIndicesBuffer: null
+            VertexIndicesBuffer: null,
+            Coordinate: radioulnar = {
+                axis: [0.056398022307, 0.983577389037, -0.171449067814],
+                min: -1.570796326795,
+                max: 1.570796326795,
+                cur_value: 0.0
+            }
         };
 
 
@@ -157,10 +163,13 @@
             vertexPositions.numItems = parseInt(counts[0]);
             triangleBuffer.numItems = parseInt(counts[1]);
 
-
+            //var figure_type;
 
             for (i = 1; i <= vertexPositions.numItems; ++i) {
                 var val = lines[i].split(/\s+/);
+                //figure_type = parseFloat((val[0]));
+
+
                 vertexPositions.push(parseFloat(val[1]));
                 vertexPositions.push(parseFloat(val[2]));
                 vertexPositions.push(parseFloat(val[3]));
@@ -305,13 +314,14 @@
 
             //mat4.identity(mvMatrix);
             mat4.translate(mvMatrix, [-0.0065, -0.008, 0.027]);
-
+            mat4.rotate(mvMatrix, radius.Coordinate.cur_value, radius.Coordinate.axis);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, radius.VertexPositionBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, radius.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, radius.VertexIndicesBuffer);
             setMatrixUniforms();
+
             gl.drawElements(gl.TRIANGLES, radius.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
         }
@@ -346,13 +356,14 @@
 <body onload="webGLStart();">
 
 
-<canvas id="canvas" style="border: none;" width="500" height="500"></canvas>
-<div id="slider" ></div>
+<canvas id="canvas" style="border: none;" width="1500" height="900"></canvas>
+<div id="elbow_flexion" ></div>
+<div id="radioulnar"></div>
 </body>
 <script type="text/javascript">
 
-    var a = 0.0;
-    $("#slider").slider({
+
+    $("#elbow_flexion").slider({
         min: ulna.Coordinate.min,
         max: ulna.Coordinate.max,
         step: 0.001,
@@ -361,6 +372,14 @@
         }
     }).slider("float");
 
+    $("#radioulnar").slider({
+        min: radius.Coordinate.min,
+        max: radius.Coordinate.max,
+        step: 0.001,
+        slide: function( event, ui ) {
+            radius.Coordinate.cur_value = ui.value;
+        }
+    }).slider("float");
 
 </script>
 
