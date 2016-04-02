@@ -58,16 +58,13 @@
 
         }
 
-        function Joint(axis, min, max, cur_value, location) {
+        function Joint(axis, min, max, cur_value, location, movable) {
             this.axis = axis;
             this.min = min;
             this.max = max;
             this.cur_value = cur_value;
             this.location = location;
-
-
-
-
+            this.movable = movable;
 
         }
         var humerus = new Bone("bones/humerus.asc", null, null, null);
@@ -76,7 +73,8 @@
                 0.0,
                 2.268928027593,
                 0.0,
-                [0.0127, -0.274, 0.0389]
+                [0.0127, -0.274, 0.0389],
+                true
 
         );
 
@@ -87,13 +85,29 @@
                 -1.570796326795,
                 1.570796326795,
                 0.0,
-                [-0.0065, -0.008, 0.027]
+                [-0.0065, -0.008, 0.027],
+                true
         );
 
         var radius = new Bone("bones/_radius.asc", null, null, radioulnar);
 
 
+        function initSlider(bone, num) {
+            var div = document.createElement('div');
+            div.id = "Moving"+num.toString();
 
+            document.body.appendChild(div);
+
+            $("#" + div.id).slider({
+                min: bone.Coordinate.min,
+                max: bone.Coordinate.max,
+                step: 0.001,
+                slide: function( event, ui ) {
+                    bone.Coordinate.cur_value = ui.value;
+                }
+            }).slider("float");
+
+        }
 
         
         function initGL() {
@@ -391,6 +405,11 @@
             for (i = 0; i < Bones.length; ++i)
             {
                 getBone(Bones[i]);
+                if (Bones[i].Coordinate != null) {
+                    if (Bones[i].Coordinate.movable){
+                        initSlider(Bones[i], i);
+                    }
+                }
             }
 
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -416,34 +435,9 @@
 
 
 <canvas id="canvas" style="border: none;" width="1500" height="900"></canvas>
-<div id="elbow_flexion" ></div>
-<div id="radioulnar"></div>
+<!--<div id="elbow_flexion" ></div>
+<div id="radioulnar"></div> -->
 </body>
-<script type="text/javascript">
 
-
-    $("#elbow_flexion").slider({
-        min: ulna.Coordinate.min,
-        max: ulna.Coordinate.max,
-        step: 0.001,
-        slide: function( event, ui ) {
-            ulna.Coordinate.cur_value = ui.value;
-        }
-    }).slider("float");
-
-    $("#radioulnar").slider({
-        min: radius.Coordinate.min,
-        max: radius.Coordinate.max,
-        step: 0.001,
-        slide: function( event, ui ) {
-            radius.Coordinate.cur_value = ui.value;
-        }
-    }).slider("float");
-
-
-
-
-
-</script>
 
 </html>
