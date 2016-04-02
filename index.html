@@ -45,7 +45,57 @@
     <script type="text/javascript">
         var gl;
         var canvas;
+        var Bones = [];
 
+        function Bone(filename, VertexPositionBuffer, VertexIndicesBuffer, Coordinate) {
+            this.filename = filename;
+            this.VertexPositionBuffer = VertexPositionBuffer;
+            this.VertexIndicesBuffer = VertexIndicesBuffer;
+            this.Coordinate = Coordinate;
+            Bones.push(this);
+
+
+
+        }
+
+        function Joint(axis, min, max, cur_value, location) {
+            this.axis = axis;
+            this.min = min;
+            this.max = max;
+            this.cur_value = cur_value;
+            this.location = location;
+
+
+
+
+
+        }
+        var humerus = new Bone("bones/humerus.asc", null, null, null);
+        var elbow_flexion = new Joint(
+                [0.226046935824, 0.191039945763, 0.955199728815],
+                0.0,
+                2.268928027593,
+                0.0,
+                [0.0127, -0.274, 0.0389]
+
+        );
+
+        var ulna = new Bone("bones/_ulna.asc", null, null, elbow_flexion);
+
+        var radioulnar = new Joint(
+                [0.056398022307, 0.983577389037, -0.171449067814],
+                -1.570796326795,
+                1.570796326795,
+                0.0,
+                [-0.0065, -0.008, 0.027]
+        );
+
+        var radius = new Bone("bones/_radius.asc", null, null, radioulnar);
+
+
+
+
+        
         function initGL() {
             gl = canvas.getContext("webgl");
             gl.viewWidth = canvas.width;
@@ -55,37 +105,9 @@
 
         }
 
-        var humerus = {
-            filename: "bones/humerus.asc",
-            VertexPositionBuffer: null,
-            VertexIndicesBuffer: null
 
-        };
 
-        var ulna = {
-            filename: "bones/_ulna.asc",
-            VertexPositionBuffer: null,
-            VertexIndicesBuffer: null,
-            Coordinate: elbow_flexion = {
-                axis: [0.226046935824, 0.191039945763, 0.955199728815],
-                min: 0.0,
-                max: 2.268928027593,
-                cur_value: 0.0
-            }
 
-        };
-
-        var radius = {
-            filename: "bones/_radius.asc",
-            VertexPositionBuffer: null,
-            VertexIndicesBuffer: null,
-            Coordinate: radioulnar = {
-                axis: [0.056398022307, 0.983577389037, -0.171449067814],
-                min: -1.570796326795,
-                max: 1.570796326795,
-                cur_value: 0.0
-            }
-        };
 
 
         var shader;
@@ -163,23 +185,75 @@
             vertexPositions.numItems = parseInt(counts[0]);
             triangleBuffer.numItems = parseInt(counts[1]);
 
-            //var figure_type;
 
-            for (i = 1; i <= vertexPositions.numItems; ++i) {
+            for (i = 1; i <= counts[0]; ++i) {
                 var val = lines[i].split(/\s+/);
-                //figure_type = parseFloat((val[0]));
 
 
                 vertexPositions.push(parseFloat(val[1]));
                 vertexPositions.push(parseFloat(val[2]));
                 vertexPositions.push(parseFloat(val[3]));
+
+
             }
 
-            for (i = vertexPositions.numItems + 1; i <= 1 + vertexPositions.numItems + triangleBuffer.numItems; ++i) {
-                val = lines[i].split(" ");
-                triangleBuffer.push(parseInt(val[1]));
-                triangleBuffer.push(parseInt(val[2]));
-                triangleBuffer.push(parseInt(val[3]));
+            for (i = parseInt(counts[0]) + 1; i <= 1 + parseInt(counts[0]) + parseInt(counts[1]); ++i) {
+                var val = lines[i].split(/\s+/);
+                var figure_type = parseInt(val[0]);
+
+                switch (figure_type)
+                {
+                    case 3:
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[2]));
+                        triangleBuffer.push(parseInt(val[3]));
+                        break;
+                    case 4:
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[2]));
+                        triangleBuffer.push(parseInt(val[3]));
+
+                        triangleBuffer.numItems++;
+                        triangleBuffer.push(parseInt(val[3]));
+                        triangleBuffer.push(parseInt(val[4]));
+                        triangleBuffer.push(parseInt(val[1]));
+                        break;
+                    case 5:
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[2]));
+                        triangleBuffer.push(parseInt(val[3]));
+
+                        triangleBuffer.numItems += 2;
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[3]));
+                        triangleBuffer.push(parseInt(val[4]));
+
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[4]));
+                        triangleBuffer.push(parseInt(val[5]));
+                        break;
+                    case 6:
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[2]));
+                        triangleBuffer.push(parseInt(val[3]));
+
+                        triangleBuffer.numItems += 3;
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[3]));
+                        triangleBuffer.push(parseInt(val[4]));
+
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[4]));
+                        triangleBuffer.push(parseInt(val[5]));
+
+                        triangleBuffer.push(parseInt(val[1]));
+                        triangleBuffer.push(parseInt(val[5]));
+                        triangleBuffer.push(parseInt(val[6]));
+                        break;
+
+                }
+
+
             }
 
             bone.VertexPositionBuffer = gl.createBuffer();
@@ -281,48 +355,30 @@
 
             mat4.translate(mvMatrix, [0.0, 0.2, -1.0]);
 
-            //mat4.rotate(mvMatrix, degToRad(-90), [0, 0, 1]);
 
             mat4.multiply(mvMatrix, sceneRotationMatrix);
+            
+            for (i = 0; i < Bones.length; ++i)
+            {
+                if (Bones[i].VertexIndicesBuffer == null || Bones[i].VertexPositionBuffer == null)
+                    return null;
+
+                if (Bones[i].Coordinate != null) {
+                    mat4.translate(mvMatrix, Bones[i].Coordinate.location);
+                    mat4.rotate(mvMatrix, Bones[i].Coordinate.cur_value, Bones[i].Coordinate.axis);
+                }
+                
+                gl.bindBuffer(gl.ARRAY_BUFFER, Bones[i].VertexPositionBuffer);
+                gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Bones[i].VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Bones[i].VertexIndicesBuffer);
+                setMatrixUniforms();
+                gl.drawElements(gl.TRIANGLES, Bones[i].VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+                
+            }
+            
 
 
-            if (humerus.VertexIndicesBuffer == null || humerus.VertexPositionBuffer == null)
-                return null;
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, humerus.VertexPositionBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, humerus.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, humerus.VertexIndicesBuffer);
-            setMatrixUniforms();
-            gl.drawElements(gl.TRIANGLES, humerus.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-
-            if (ulna.VertexIndicesBuffer == null || ulna.VertexPositionBuffer == null)
-                return null;
-
-            mat4.translate(mvMatrix, [0.0127, -0.274, 0.0389]);
-            mat4.rotate(mvMatrix, ulna.Coordinate.cur_value, ulna.Coordinate.axis);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, ulna.VertexPositionBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, ulna.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ulna.VertexIndicesBuffer);
-            setMatrixUniforms();
-            gl.drawElements(gl.TRIANGLES, ulna.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-
-            if (radius.VertexIndicesBuffer == null || radius.VertexPositionBuffer == null)
-                return null;
-
-            //mat4.identity(mvMatrix);
-            mat4.translate(mvMatrix, [-0.0065, -0.008, 0.027]);
-            mat4.rotate(mvMatrix, radius.Coordinate.cur_value, radius.Coordinate.axis);
-
-            gl.bindBuffer(gl.ARRAY_BUFFER, radius.VertexPositionBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, radius.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, radius.VertexIndicesBuffer);
-            setMatrixUniforms();
-
-            gl.drawElements(gl.TRIANGLES, radius.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 
         }
 
@@ -330,10 +386,13 @@
             canvas = document.getElementById("canvas");
             initGL(canvas);
             initShaders();
-            //initBuffers();
-            getBone(humerus);
-            getBone(ulna);
-            getBone(radius);
+
+
+            for (i = 0; i < Bones.length; ++i)
+            {
+                getBone(Bones[i]);
+            }
+
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
             gl.enable(gl.DEPTH_TEST);
@@ -342,7 +401,7 @@
             document.onmouseup = MouseUp;
             document.onmousemove = MouseMove;
 
-            //drawScene();
+
             tick();
 
         }
@@ -353,7 +412,7 @@
 </head>
 
 
-<body onload="webGLStart();">
+<body onload = "webGLStart();">
 
 
 <canvas id="canvas" style="border: none;" width="1500" height="900"></canvas>
@@ -380,6 +439,10 @@
             radius.Coordinate.cur_value = ui.value;
         }
     }).slider("float");
+
+
+
+
 
 </script>
 
