@@ -1,48 +1,69 @@
 var Bones = [];
 
-function Bone(filename, VertexPositionBuffer, VertexIndicesBuffer, Coordinate) {
+function Bone(filename, VertexPositionBuffer, VertexIndicesBuffer, Joint, Visible, parent, childs) {
     this.filename = filename;
     this.VertexPositionBuffer = VertexPositionBuffer;
     this.VertexIndicesBuffer = VertexIndicesBuffer;
-    this.Coordinate = Coordinate;
+    this.Joint = Joint;
+    this.Visible = Visible;
+    this.Childs = childs;
     Bones.push(this);
-
-
-
+    if (parent != null)
+        parent.Childs.push(this);
 }
 
-function Joint(axis, min, max, cur_value, location, movable) {
+function Joint(location, orientation, movable, motion) {
+
+    this.location = location;
+    this.orientation = orientation;
+    this.movable = movable;
+    this.Motion = motion;
+}
+
+function Motion(axis, min, max, cur_value) {
     this.axis = axis;
     this.min = min;
     this.max = max;
     this.cur_value = cur_value;
-    this.location = location;
-    this.movable = movable;
-
+    
 }
-var humerus = new Bone("bones/humerus.asc", null, null, null);
-var elbow_flexion = new Joint(
-    [0.226046935824, 0.191039945763, 0.955199728815],
+
+
+var humerus = new Bone("bones/humerus.asc", null, null, null, true, null, [] );
+
+var elbow_flexion = new Motion([0.226046935824, 0.191039945763, 0.955199728815],
     0.0,
     2.268928027593,
-    0.0,
-    [0.0127, -0.274, 0.0389],
-    true
-
+    0.0
 );
 
-var ulna = new Bone("bones/_ulna.asc", null, null, elbow_flexion);
+var elbow = new Joint(
+    [0.0127, -0.274, 0.0389],
+    [0, 0, 0],
+    true,
+    elbow_flexion
+);
 
-var radioulnar = new Joint(
+var ulna = new Bone("bones/_ulna.asc", null, null, elbow, true, humerus, [] );
+
+var pro_sup = new Motion(
     [0.056398022307, 0.983577389037, -0.171449067814],
     -1.570796326795,
     1.570796326795,
-    0.0,
+    0.0
+)
+
+
+var radioulnar = new Joint(
+
     [-0.0065, -0.008, 0.027],
-    true
+    [0, 0, 0],
+    true,
+    pro_sup
 );
 
-var radius = new Bone("bones/_radius.asc", null, null, radioulnar);
+var radius = new Bone("bones/_radius.asc", null, null, radioulnar, true, ulna, []);
+
 
 
 function initSlider(bone, num) {
@@ -52,11 +73,11 @@ function initSlider(bone, num) {
     document.body.appendChild(div);
 
     $("#" + div.id).slider({
-        min: bone.Coordinate.min,
-        max: bone.Coordinate.max,
+        min: bone.Joint.Motion.min,
+        max: bone.Joint.Motion.max,
         step: 0.001,
         slide: function( event, ui ) {
-            bone.Coordinate.cur_value = ui.value;
+            bone.Joint.Motion.cur_value = ui.value;
         }
     }).slider("float");
 

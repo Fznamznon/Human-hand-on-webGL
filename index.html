@@ -309,20 +309,33 @@
             
             for (i = 0; i < Bones.length; ++i)
             {
-                if (Bones[i].VertexIndicesBuffer == null || Bones[i].VertexPositionBuffer == null)
-                    return null;
 
-                if (Bones[i].Coordinate != null) {
-                    mat4.translate(mvMatrix, Bones[i].Coordinate.location);
-                    mat4.rotate(mvMatrix, Bones[i].Coordinate.cur_value, Bones[i].Coordinate.axis);
+                if (Bones[i].Joint != null) {
+
+                    mat4.translate(mvMatrix, Bones[i].Joint.location);
+
+                    mat4.rotate(mvMatrix, Bones[i].Joint.orientation[0], [1, 0, 0]);
+                    mat4.rotate(mvMatrix, Bones[i].Joint.orientation[1], [0, 1, 0]);
+                    mat4.rotate(mvMatrix, Bones[i].Joint.orientation[2], [0, 0, 1]);
+
+                    if (Bones[i].Joint.movable){
+                        mat4.rotate(mvMatrix, Bones[i].Joint.Motion.cur_value, Bones[i].Joint.Motion.axis);
+
+                    }
                 }
-                
-                gl.bindBuffer(gl.ARRAY_BUFFER, Bones[i].VertexPositionBuffer);
-                gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Bones[i].VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Bones[i].VertexIndicesBuffer);
-                setMatrixUniforms();
-                gl.drawElements(gl.TRIANGLES, Bones[i].VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+                if (Bones[i].Visible) {
+                    if (Bones[i].VertexIndicesBuffer == null || Bones[i].VertexPositionBuffer == null)
+                        return null;
+                    gl.bindBuffer(gl.ARRAY_BUFFER, Bones[i].VertexPositionBuffer);
+                    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Bones[i].VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Bones[i].VertexIndicesBuffer);
+                    setMatrixUniforms();
+                    gl.drawElements(gl.TRIANGLES, Bones[i].VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+                }
+
+
                 
             }
             
@@ -339,9 +352,13 @@
 
             for (i = 0; i < Bones.length; ++i)
             {
-                getBone(Bones[i]);
-                if (Bones[i].Coordinate != null) {
-                    if (Bones[i].Coordinate.movable){
+                if (Bones[i].Visible)
+                {
+                    getBone(Bones[i]);
+
+                }
+                if (Bones[i].Joint != null) {
+                    if (Bones[i].Joint.movable){
                         initSlider(Bones[i], i);
                     }
                 }
