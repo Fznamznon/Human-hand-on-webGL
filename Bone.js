@@ -66,6 +66,8 @@ var radius = new Bone("bones/_radius.asc", null, null, radioulnar, true, ulna, [
 
 
 
+
+
 function initSlider(bone, num) {
     var div = document.createElement('div');
     div.id = "Moving"+num.toString();
