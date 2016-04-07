@@ -355,7 +355,8 @@
 
             mat4.identity(mvMatrix); //в центр пространства
 
-            mat4.translate(mvMatrix, [0.0, 0.2, -1.0]);
+            mat4.translate(mvMatrix, [0.0, 0.3, -1.0]);
+            mat4.rotate(mvMatrix, degToRad(-100), [0, 1, 0]);
 
 
             mat4.multiply(mvMatrix, sceneRotationMatrix);
@@ -446,7 +447,7 @@
 <body onload = "webGLStart();">
 
 
-<canvas id="canvas" width="1900" height="900"></canvas>
+<canvas id="canvas" width="1900" height="1000"></canvas>
 <!--<div id="elbow_flexion" ></div>
 <div id="radioulnar"></div> -->
 </body>

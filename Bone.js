@@ -269,6 +269,98 @@ DIP.addMotion(DIP_flex);
 
 var Iphalanx3 = new Bone("bones/_fingers4.asc", DIP, true, Iphalanx2, []);
 
+var CMC3 = new Joint(
+    [-0.0047, -0.0085, -0.005],
+    [0.0872664626, 0.174532925199, 0.0872664626],
+    false
+);
+
+var metacarpal3 = new Bone("bones/_fingers8.asc", CMC3, true, carp_metacarp, []);
+
+var MCP3 = new Joint(
+    [0.0, -0.003, 0.0],
+    [0, 0, 0],
+    false
+);
+
+var midfinger1 = new Bone("bones/_fingers5.asc", MCP3, true, metacarpal3, []);
+var midfinger2 = new Bone("bones/_fingers6.asc", MCP3, true, metacarpal3, []);
+var midfinger3 = new Bone("bones/_fingers7.asc", MCP3, true, metacarpal3, []);
+
+var CMC4 = new Joint(
+    [-0.0047, -0.008, -0.0033],
+    [0.0872664626, 0.174532925199, 0.0872664626],
+    false
+);
+
+var metacarpal4 = new Bone("bones/_fingers12.asc", CMC4, true, carp_metacarp, []);
+
+var MCP4 = new Joint(
+    [0.0, -0.0025, 0.0],
+    [0, 0, 0],
+    false
+);
+
+var ringfinger1 = new Bone("bones/_fingers9.asc", MCP4, true, metacarpal4, []);
+var ringfinger2 = new Bone("bones/_fingers10.asc", MCP4, true, metacarpal4, []);
+var ringfinger3 = new Bone("bones/_fingers11.asc", MCP4, true, metacarpal4, []);
+
+var CMC5 = new Joint(
+    [-0.002, -0.01, 0.0035],
+    [0.0872664626, 0.174532925199, 0.0872664626],
+    false
+);
+
+var metacarpal5 = new Bone("bones/_fingers16.asc", CMC5, true, carp_metacarp, []);
+
+var MCP5 = new Joint(
+    [0.0, -0.002, 0.0],
+    [0, 0, 0],
+    false
+);
+
+var littlefinger1 = new Bone("bones/_fingers13.asc", MCP5, true, metacarpal5, []);
+var littlefinger2 = new Bone("bones/_fingers14.asc", MCP5, true, metacarpal5, []);
+var littlefinger3 = new Bone("bones/_fingers15.asc", MCP5, true, metacarpal5, []);
+
+
+var thumb_abd = new Motion(
+    [1, 0, 0],
+    -0.785398163397,
+    0.261799387799,
+    0
+);
+
+var thumb_flex = new Motion(
+    [0.056398022307, 0.983577389037, -0.171449067814],
+    -0.785398163397,
+    1.570796326795,
+    0
+);
+
+var CMC1 = new Joint(
+    [0.008, -0.0045, 0.0219],
+    [0, 0, 0],
+    true
+);
+
+CMC1.addMotion(thumb_abd);
+CMC1.addMotion(thumb_flex);
+
+var thumb = new Bone("bones/_fingers17.asc", CMC1, true, carp_metacarp, []);
+
+var CMC1_1 = new Joint(
+    [0, 0, 0],
+    [0, 0, 0],
+    false
+)
+
+var thumb_1 = new Bone("bones/_fingers18.asc", CMC1_1, true, thumb, []);
+var thumb_2 = new Bone("bones/_fingers19.asc", CMC1_1, true, thumb, []);
+
+
+
+
 function initSlider(bone, num, numOM) {
     var div = document.createElement('div');
     div.id = "Motion_of_Bone"+num.toString()+"_num" + numOM.toString();
