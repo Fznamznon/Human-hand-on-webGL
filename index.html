@@ -323,8 +323,9 @@
                 mat4.rotate(mvMatrix, Bone.Joint.orientation[2], [0, 0, 1]);
 
                 if (Bone.Joint.movable){
-                    mat4.rotate(mvMatrix, Bone.Joint.Motion.cur_value, Bone.Joint.Motion.axis);
-
+                    for (var j = 0; j < Bone.Joint.Motions.length; ++j) {
+                        mat4.rotate(mvMatrix, Bone.Joint.Motions[j].cur_value, Bone.Joint.Motions[j].axis);
+                    }
                 }
             }
 
@@ -414,7 +415,11 @@
                 }
                 if (Bones[i].Joint != null) {
                     if (Bones[i].Joint.movable){
-                        initSlider(Bones[i], i);
+                        var j = 0;
+                        for (; j < Bones[i].Joint.Motions.length; j++) {
+                            initSlider(Bones[i], i, j);
+                        }
+                        //j = 0;
                     }
                 }
             }
@@ -441,7 +446,7 @@
 <body onload = "webGLStart();">
 
 
-<canvas id="canvas" style="border: none;" width="1500" height="900"></canvas>
+<canvas id="canvas" width="1900" height="900"></canvas>
 <!--<div id="elbow_flexion" ></div>
 <div id="radioulnar"></div> -->
 </body>
