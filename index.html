@@ -18,11 +18,12 @@
 
 
     <script id="shader-fs" type="x-shader/x-fragment"> //пиксельный шейдер
-
+    precision mediump float;
+    varying vec3 vLightWeighting;
 
     void main(void)
     {
-      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      gl_FragColor = vec4((1.0, 1.0, 1.0) * vLightWeighting, 1.0);
     }
 
     </script>
@@ -30,13 +31,28 @@
     <script id="shader-vs" type="x-shader/x-vertex"> //вершинный шейдер
     
     attribute vec3 aVertexPosition;
+    attribute vec3 aVertexNormal;
 
     uniform mat4 mvMatrix;
     uniform mat4 pMatrix;
 
+    uniform mat3 uNMatrix;
+
+    uniform vec3 uAmbientColor;
+
+    uniform vec3 uLightingDirection;
+    uniform vec3 uDirectionalColor;
+
+    varying vec3 vLightWeighting;
+
     void main(void)
     {
-      gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);      
+        gl_Position = pMatrix * mvMatrix * vec4(aVertexPosition, 1.0);
+
+        vec3 transformedNormal = uNMatrix * aVertexNormal;
+        float directionalLightWeighting;
+        directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+        vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
     }
 
 
@@ -115,16 +131,47 @@
             gl.useProgram(shaderProgram);
 
             shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-            //alert(shaderProgram.vertexPositionAttribute);
             gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+            shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+            gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
 
             shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "pMatrix");
             shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "mvMatrix");
+            shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
+            shaderProgram.ambientColorUniform = gl.getUniformLocation(shaderProgram, "uAmbientColor");
+            shaderProgram.lightingDirectionUniform = gl.getUniformLocation(shaderProgram, "uLightingDirection");
+            shaderProgram.directionalColorUniform = gl.getUniformLocation(shaderProgram, "uDirectionalColor");
         }
 
 
-        var vertexPositionBuffer;
-        var vertexIndices ;
+        function getNormal(a, b, c, vertexPositions)
+        {
+            var v1x = vertexPositions[3 * b] - vertexPositions[3 * a];
+            var v1y = vertexPositions[3 * b + 1] - vertexPositions[3 * a + 1];
+            var v1z = vertexPositions[3 * b + 2] - vertexPositions[3 * a + 2];
+
+            var v2x = vertexPositions[3 * c] - vertexPositions[3 * a];
+            var v2y = vertexPositions[3 * c + 1] - vertexPositions[3 * a + 1];
+            var v2z = vertexPositions[3 * c + 2] - vertexPositions[3 * a + 2];
+
+
+            var r = [];
+            r.push(v1y * v2z - v2y * v1z);
+            r.push(v1z * v2x - v2z * v1x);
+            r.push(v1x * v2y - v2x * v1y);
+            var res = [];
+            vec3.normalize(r, res);
+
+            return res;
+
+        }
+
+        function setNormal(a, normal, normalBuffer) {
+            normalBuffer[3 * a] = normal[0];
+            normalBuffer[3 * a + 1] = normal[1];
+            normalBuffer[3 * a + 2] = normal[2];
+        }
 
         function parse(data, bone) {
             var vertexPositions = [];
@@ -133,6 +180,7 @@
             var counts = lines[0].split(" ");
             vertexPositions.numItems = parseInt(counts[0]);
             triangleBuffer.numItems = parseInt(counts[1]);
+            var normalBuffer = [];
 
 
             for (i = 1; i <= counts[0]; ++i) {
@@ -149,55 +197,186 @@
             for (i = parseInt(counts[0]) + 1; i <= 1 + parseInt(counts[0]) + parseInt(counts[1]); ++i) {
                 var val = lines[i].split(/\s+/);
                 var figure_type = parseInt(val[0]);
+                var a, b, c;
+                var NormalA, NormalB, NormalC;
 
                 switch (figure_type)
                 {
                     case 3:
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[2]));
-                        triangleBuffer.push(parseInt(val[3]));
+                        a = parseInt(val[1]);
+                        b = parseInt(val[2]);
+                        c = parseInt(val[3]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+                            
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+                            
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+                            
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
                         break;
                     case 4:
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[2]));
-                        triangleBuffer.push(parseInt(val[3]));
+                        a = parseInt(val[1]);
+                        b = parseInt(val[2]);
+                        c = parseInt(val[3]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
 
                         triangleBuffer.numItems++;
-                        triangleBuffer.push(parseInt(val[3]));
-                        triangleBuffer.push(parseInt(val[4]));
-                        triangleBuffer.push(parseInt(val[1]));
+
+                        a = parseInt(val[3]);
+                        b = parseInt(val[4]);
+                        c = parseInt(val[1]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
                         break;
                     case 5:
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[2]));
-                        triangleBuffer.push(parseInt(val[3]));
-
                         triangleBuffer.numItems += 2;
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[3]));
-                        triangleBuffer.push(parseInt(val[4]));
 
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[4]));
-                        triangleBuffer.push(parseInt(val[5]));
+                        a = parseInt(val[1]);
+                        b = parseInt(val[2]);
+                        c = parseInt(val[3]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+                        a = parseInt(val[1]);
+                        b = parseInt(val[3]);
+                        c = parseInt(val[4]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+                        a = parseInt(val[1]);
+                        b = parseInt(val[4]);
+                        c = parseInt(val[5]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+
                         break;
                     case 6:
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[2]));
-                        triangleBuffer.push(parseInt(val[3]));
-
                         triangleBuffer.numItems += 3;
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[3]));
-                        triangleBuffer.push(parseInt(val[4]));
 
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[4]));
-                        triangleBuffer.push(parseInt(val[5]));
+                        a = parseInt(val[1]);
+                        b = parseInt(val[2]);
+                        c = parseInt(val[3]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
 
-                        triangleBuffer.push(parseInt(val[1]));
-                        triangleBuffer.push(parseInt(val[5]));
-                        triangleBuffer.push(parseInt(val[6]));
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+                        a = parseInt(val[1]);
+                        b = parseInt(val[3]);
+                        c = parseInt(val[4]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+                        a = parseInt(val[1]);
+                        b = parseInt(val[4]);
+                        c = parseInt(val[5]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+                        a = parseInt(val[1]);
+                        b = parseInt(val[5]);
+                        c = parseInt(val[6]);
+                        triangleBuffer.push(a);
+                        triangleBuffer.push(b);
+                        triangleBuffer.push(c);
+
+                        NormalA = getNormal(a, b, c, vertexPositions);
+                        setNormal(a, NormalA, normalBuffer);
+
+                        NormalB = getNormal(b, a, c, vertexPositions);
+                        setNormal(b, NormalB, normalBuffer);
+
+                        NormalC = getNormal(c, a, b, vertexPositions);
+                        setNormal(c, NormalC, normalBuffer);
+
+
                         break;
 
                 }
@@ -219,6 +398,12 @@
 
             gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleBuffer), gl.STATIC_DRAW);
             bone.VertexIndicesBuffer.numItems = triangleBuffer.numItems * 3;
+
+            bone.NormalBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, bone.NormalBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalBuffer), gl.STATIC_DRAW);
+            bone.NormalBuffer.numItems = vertexPositions.numItems * 3;
+            bone.NormalBuffer.itemsize = 3;
 
         }
         function getBone(bone) {
@@ -260,6 +445,11 @@
         function setMatrixUniforms() {
             gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
             gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+
+            var normalMatrix = mat3.create();
+            mat4.toInverseMat3(mvMatrix, normalMatrix);
+            mat3.transpose(normalMatrix);
+            gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
         }
 
         function degToRad(degrees) {
@@ -335,7 +525,12 @@
                 gl.bindBuffer(gl.ARRAY_BUFFER, Bone.VertexPositionBuffer);
                 gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Bone.VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, Bone.NormalBuffer);
+                gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, Bone.NormalBuffer.itemsize, gl.FLOAT, false, 0, 0);
+
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Bone.VertexIndicesBuffer);
+
                 setMatrixUniforms();
                 gl.drawElements(gl.TRIANGLES, Bone.VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
             }
@@ -351,7 +546,25 @@
         function drawScene() {
             gl.viewport(0, 0, gl.viewWidth, gl.viewHeight);
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-            mat4.perspective(45, gl.viewWidth / gl.viewHeight, 0.0001, 100500, pMatrix);
+            mat4.perspective(45, gl.viewWidth / gl.viewHeight, 0.01, 100, pMatrix);
+
+            gl.uniform3f(
+                    shaderProgram.ambientColorUniform,
+                    0.2, 0.2, 0.2
+            );
+            var lightingDirection = [
+                -1.0, -1.0, -1.0
+            ];
+            var adjustedLD = vec3.create();
+            vec3.normalize(lightingDirection, adjustedLD);
+            vec3.scale(adjustedLD, -1);
+            gl.uniform3fv(shaderProgram.lightingDirectionUniform, adjustedLD);
+            gl.uniform3f(
+                    shaderProgram.directionalColorUniform,
+                    0.8, 0.8, 0.8
+            );
+
+
 
             mat4.identity(mvMatrix); //в центр пространства
 
@@ -361,43 +574,11 @@
 
             mat4.multiply(mvMatrix, sceneRotationMatrix);
 
+
+
             drawBone(humerus);
 
-            /*
-            for (i = 0; i < Bones.length; ++i)
-            {
 
-                if (Bones[i].Joint != null) {
-
-                    mat4.translate(mvMatrix, Bones[i].Joint.location);
-
-                    mat4.rotate(mvMatrix, Bones[i].Joint.orientation[0], [1, 0, 0]);
-                    mat4.rotate(mvMatrix, Bones[i].Joint.orientation[1], [0, 1, 0]);
-                    mat4.rotate(mvMatrix, Bones[i].Joint.orientation[2], [0, 0, 1]);
-
-                    if (Bones[i].Joint.movable){
-                        mat4.rotate(mvMatrix, Bones[i].Joint.Motion.cur_value, Bones[i].Joint.Motion.axis);
-
-                    }
-                }
-
-                if (Bones[i].Visible) {
-                    if (Bones[i].VertexIndicesBuffer == null || Bones[i].VertexPositionBuffer == null)
-                        return null;
-                    gl.bindBuffer(gl.ARRAY_BUFFER, Bones[i].VertexPositionBuffer);
-                    gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, Bones[i].VertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, Bones[i].VertexIndicesBuffer);
-                    setMatrixUniforms();
-                    gl.drawElements(gl.TRIANGLES, Bones[i].VertexIndicesBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-                }
-
-
-                
-            }
-            
-
-            */
 
         }
 

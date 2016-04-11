@@ -10,6 +10,7 @@ function Bone(filename, Joint, Visible, parent, childs) {
     Bones.push(this);
     if (parent != null)
         parent.Childs.push(this);
+    this.NormalBuffer = null;
 }
 
 function Joint(location, orientation, movable) {
