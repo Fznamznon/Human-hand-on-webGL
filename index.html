@@ -16,6 +16,14 @@
     <script type="text/javascript" src="jquery-ui-slider-pips.js"></script>
     <link rel="stylesheet" href="jquery-ui-slider-pips.css">
 
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
+          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
 
     <script id="shader-fs" type="x-shader/x-fragment"> //пиксельный шейдер
     precision mediump float;
@@ -582,11 +590,70 @@
 
         }
 
+        function linAppr(x1, y1, x2, y2, t)
+        {
+            return y1 + (y2 - y1)/(x2 - x1)*(t - x1);
+        }
+        var time;
+        function testMotion() {
+            time = 0;
+            var div = document.createElement('div');
+            div.id = "test";
+
+            document.body.appendChild(div);
+
+            $("#" + div.id).slider({
+                min: 0,
+                max: 1,
+                step: 0.001,
+                slide: function( event, ui ) {
+                    var x1, x2, y11, y12, y21, y22, y13, y23;
+                    if (time < ui.value)
+                    {
+                        x1 = time;
+                        x2 = 1;
+                        y11 = PIP_flex.cur_value;
+                        y12 = DIP_flex.cur_value;
+                        y21 = PIP_flex.max;
+                        y22 = DIP_flex.max;
+                        y13 = MCP2_flex.cur_value;
+                        y23 = MCP2_flex.max;
+
+                    }
+                    else
+                    {
+                        x1 = 0;
+                        x2 = time;
+                        y11 = PIP_flex.min;
+                        y12 = DIP_flex.min;
+                        y21 = PIP_flex.cur_value;
+                        y22 = DIP_flex.cur_value;
+                        y13 = MCP2_flex.min;
+                        y23 = MCP2_flex.cur_value;
+
+                    }
+                    PIP_flex.cur_value = linAppr(x1, y11, x2, y21, ui.value);
+                    DIP_flex.cur_value = linAppr(x1, y12, x2, y22, ui.value);
+                    MCP2_flex.cur_value = linAppr(x1, y13, x2, y23, ui.value);
+                    time = ui.value;
+                    $("#Motion_of_Bone19_num0").slider("value", PIP_flex.cur_value);
+                    $("#Motion_of_Bone20_num0").slider("value", DIP_flex.cur_value);
+                    $("#Motion_of_Bone18_num1").slider("value", MCP2_flex.cur_value);
+
+                }
+            }).slider("float");
+
+        }
+
         function webGLStart() {
             canvas = document.getElementById("canvas");
+
+            var width = document.documentElement.clientWidth;
+            var height = document.documentElement.clientHeight - document.documentElement.clientHeight / 10;
+            canvas.setAttribute("width", width.toString());
+            canvas.setAttribute("height", height.toString());
             initGL(canvas);
             initShaders();
-
 
             for (i = 0; i < Bones.length; ++i)
             {
@@ -604,6 +671,11 @@
                         //j = 0;
                     }
                 }
+            }
+            //testMotion();
+            for(i = 0; i < Compex_Motions.length; ++i)
+            {
+                initSliderForCompexMotion(Compex_Motions[i]);
             }
 
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -625,13 +697,25 @@
 </head>
 
 
-<body onload = "webGLStart();">
+<body>
 
 
-<canvas id="canvas" width="1900" height="1000"></canvas>
-<!--<div id="elbow_flexion" ></div>
-<div id="radioulnar"></div> -->
+<canvas id="canvas"></canvas>
+<div id="container">
+    <div class="row">
+        <div class="col-md-5" id = "SmallMotions">
+        </div>
+        <div class="col-md-offset-2 col-md-5" id = "ComplexMotions">
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    webGLStart();
+</script>
+
 </body>
+
 
 
 </html>
