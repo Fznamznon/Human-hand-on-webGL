@@ -248,7 +248,7 @@ var MCP2_flex = new Motion(
     1.570796326795,
     0,
     "MCP2_flex"
-)
+);
 
 var MCP2 = new Joint(
     [-0.0024, -0.0685, 0.045],
@@ -309,21 +309,42 @@ var CMC3 = new Joint(
     false
 );
 
+var CMC2 = new Joint(
+    [-0.0047, -0.0095, -0.005],
+    [0.174532925199, 0.261799387799, 0.0],
+    false
+);
+
 var metacarpal3 = new Bone("bones/_fingers8.asc", CMC3, true, carp_metacarp, []);
 
 
 
-var MCP3 = new Joint(
-    [0.0, -0.003, 0.0],
+var MCP3_1 = new Joint(
+    [0.0, 0.0, 0.0],
     [0, 0, 0],
     false
 );
 
+var MCP3 = new Joint(
+    [0.0, -0.003, 0.0],
+    [0, 0, 0],
+    true
+);
 
+var MCP3_flex = new Motion(
+    [0, 0, 1],
+    -0.174532925199,
+    1.570796326795,
+    0,
+    "MCP3_flex"
+);
 
-var midfinger1 = new Bone("bones/_fingers5.asc", MCP3, true, metacarpal3, []);
-var midfinger2 = new Bone("bones/_fingers6.asc", MCP3, true, metacarpal3, []);
+MCP3.addMotion(MCP3_flex);
+
 var midfinger3 = new Bone("bones/_fingers7.asc", MCP3, true, metacarpal3, []);
+
+var midfinger1 = new Bone("bones/_fingers5.asc", MCP3_1, true, midfinger3, []);
+var midfinger2 = new Bone("bones/_fingers6.asc", MCP3_1, true, midfinger3, []);
 
 var CMC4 = new Joint(
     [-0.0047, -0.008, -0.0033],

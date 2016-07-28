@@ -73,7 +73,7 @@
 
 
         
-        function initGL() {
+        function initGL(canvas) {
             gl = canvas.getContext("webgl");
             gl.viewWidth = canvas.width;
             gl.viewHeight = canvas.height;
@@ -94,7 +94,7 @@
 
             var str = "";
             var k = shaderScript.firstChild;
-            while (k) //просто выдираем текст шейдеров из документа html чтобы было красиво :)
+            while (k) 
             {
                 if (k.nodeType == 3) {
                     str += k.textContent;
